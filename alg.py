@@ -4,24 +4,21 @@ import requests
 from urllib.parse import quote
 
 
-def api_call():
+def api_call_interest_rate():
     """ API Call. """
     base_url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
     endpoint = "/v2/accounting/od/avg_interest_rates"
     params = {
-        "fields": "avg_interest_rate_amt", # record_date
+        "fields": "avg_interest_rate_amt, record_date",
         "filter": "security_desc:eq:" + quote("Treasury Bills"),
         "sort": "-record_date",
-        # "format": "json",
-        # "pagesize": "1",
     }
     full_url = f"{base_url}{endpoint}"
     response = requests.get(full_url, params=params)
 
     if response.status_code == 200:
-        return response.json()
-        # data = response.json()
-        # return data["data"][0]
+        data = response.json()
+        return data["data"][0]["avg_interest_rate_amt"]
     else:
         return f"Error: {response.status_code}"
 
@@ -52,9 +49,9 @@ def black_scholes(S_t, K, r, t, sigma):
 
 
 if __name__ == "__main__":
-    print(api_call())
+    interest_rate = float(api_call_interest_rate())
 
-    # t_m = 3 / 365
-    # option_price = black_scholes(20, 18, 0.04, t_m, 0.5)
-    # print("---")
-    # print(f"Black-Scholes Call Option Price: {option_price}")
+    t_m = 3 / 365
+    option_price = black_scholes(20, 18, interest_rate, t_m, 0.5)
+    print("---")
+    print(f"Black-Scholes Call Option Price: {option_price}")
