@@ -77,32 +77,33 @@ def api_interest_rate():
 #     response = requests.request("GET", url)
 #     return
 
-
-def api_iv_spot():
-    """MarketData api calls."""
-    ticker = input("Enter a ticker: ")
-    print()
-
-    # Fetch expiration dates for API call.
+def api_marketdata_expiration(ticker, headers):
+    """MarketData API Call for expiration dates."""
     base_url = "https://api.marketdata.app/v1/options/expirations"
     endpoint = f"/{ticker}"
     full_url = f"{base_url}{endpoint}"
-    # print(full_url)
-    headers = {
-        'Accept': 'application/json',
-        'Authorization': f'Bearer {polygon_api_token}'
-    }
+
     response = requests.get(full_url, headers=headers)
 
     if response.status_code in (200, 203):
         data = response.json()["expirations"]
         print(data)
         print()
-        # expiration = input("Enter an expiration date: ")
-        # print()
         return
     else:
         return f"Error: {response.status_code}"
+
+def api_iv_spot():
+    """MarketData api calls."""
+    ticker = input("Enter a ticker: ")
+    print()
+
+    headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {polygon_api_token}'
+    }
+
+    api_marketdata_expiration(ticker, headers)   
 
 
 def black_scholes(S_t, K, r, t, sigma):
