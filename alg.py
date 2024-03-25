@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 polygon_api_key = os.getenv('POLYGON_API_KEY')
 polygon_key_id = os.getenv('POLYGON_KEY_ID')
-polygon_api_token = os.getenv('MARKETDATA_API_TOKEN')
+marketdata_api_token = os.getenv('MARKETDATA_API_TOKEN')
 
 
 def api_all_tickers():
@@ -87,23 +87,56 @@ def api_marketdata_expiration(ticker, headers):
 
     if response.status_code in (200, 203):
         data = response.json()["expirations"]
+        print("Expiration dates:")
         print(data)
         print()
         return
     else:
         return f"Error: {response.status_code}"
 
+
+def api_marketdata_strikes(ticker, headers):
+    """MarketData API Call for expiration dates."""
+    expiration = input("Enter expiration date: ")
+    print()
+    # TODO error checking for expiration date formatting
+    base_url = "https://api.marketdata.app/v1/options/strikes"
+    params = {
+        'expiration': expiration
+    }
+    response = requests.get(f"{base_url}/{ticker}", params=params, headers=headers)
+    # print(f"Request URL: {response.url}")
+    # print(response.text)
+    # print(response.content)
+
+    if response.status_code in (200, 203):
+        # print("in if loop")
+        data = response.json()[f"{expiration}"]
+        print("Strike prices:")
+        print(data)
+        print()
+        return
+    else:
+        return f"Error: {response.status_code}"
+
+
 def api_iv_spot():
     """MarketData api calls."""
+
     ticker = input("Enter a ticker: ")
     print()
 
     headers = {
         'Accept': 'application/json',
-        'Authorization': f'Bearer {polygon_api_token}'
+        'Authorization': f'Bearer {marketdata_api_token}'
     }
 
-    api_marketdata_expiration(ticker, headers)   
+    # response -> option ticker expiration
+    api_marketdata_expiration(ticker, headers)
+    # response -> available strike prices
+    api_marketdata_strikes(ticker, headers)
+    # response -> option symbol
+    # api_marketdata_lookup(ticker, headers)
 
 
 def black_scholes(S_t, K, r, t, sigma):
