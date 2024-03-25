@@ -8,15 +8,16 @@ from dotenv import load_dotenv
 
 # polygon api keys
 load_dotenv()
-api_key = os.getenv('API_KEY')
-key_id = os.getenv('KEY_ID')
+polygon_api_key = os.getenv('POLYGON_API_KEY')
+polygon_key_id = os.getenv('POLYGON_KEY_ID')
+polygon_api_token = os.getenv('MARKETDATA_API_TOKEN')
 
 
 def api_all_tickers():
     """ API Call for all etf stock option tickers. """
     base_url = "https://api.polygon.io"
     endpoint = "/v3/reference/tickers?type=ETF&market=stocks&active=true&apiKey="
-    full_url = f"{base_url}{endpoint}{api_key}"
+    full_url = f"{base_url}{endpoint}{polygon_api_key}"
 
     response = requests.get(full_url)
 
@@ -29,7 +30,7 @@ def api_all_tickers():
         return f"Error: {response.status_code}"
 
 
-def api_call_interest_rate():
+def api_interest_rate():
     """ API Call for risk-free rate. """
     base_url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
     endpoint = "/v2/accounting/od/avg_interest_rates"
@@ -51,31 +52,61 @@ def api_call_interest_rate():
     # https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/avg_interest_rates
 
 
-def api_call_spot_price():
-    url = "https://api.polygon.io/v2/aggs/ticker/O:TSLA230113C00015000/range/1/day/2023-01-01/2023-01-11"
+# def api_call_spot_price():
+#     """API Call for spot price."""
+
+#     url = "https://api.polygon.io/v2/aggs/ticker/O:TSLA230113C00015000/range/1/day/2023-01-01/2023-01-11"
+#     headers = {
+#         "Authorization": f"Bearer {api_key}"
+#     }
+
+#     response = requests.get(url, headers=headers)
+#     data = response.json()
+#     return
+
+
+# def api_call_strike_price(ticker):
+#     """API Call for strike price."""
+#     base_url = "https://api.marketdata.app/v1/options/chain/"
+#     endpoint = f"{ticker}/"
+#     params = {
+#         "fields": "strike_price",
+#         # "filter": "ticker:eq:" + quote("O:AAPL211119C00085000") + quote(", ") + "contract_type:eq:"),
+#         "sort": "-record_date",
+#     }
+#     response = requests.request("GET", url)
+#     return
+
+
+def api_iv_spot():
+    """MarketData api calls."""
+    ticker = input("Enter a ticker: ")
+    print()
+
+    # Fetch expiration dates for API call.
+    base_url = "https://api.marketdata.app/v1/options/expirations"
+    endpoint = f"/{ticker}"
+    full_url = f"{base_url}{endpoint}"
+    # print(full_url)
     headers = {
-        "Authorization": f"Bearer {api_key}"
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {polygon_api_token}'
     }
+    response = requests.get(full_url, headers=headers)
 
-    response = requests.get(url, headers=headers)
-    data = response.json()
-    return
-
-
-def api_call_strike_price():
-    """ API Call for strike price """
-    base_url = "https://api.polygon.io"
-    endpoint = "v3/reference/options/contracts/"
-    params = {
-        "fields": "strike_price",
-        # "filter": "ticker:eq:" + quote("O:AAPL211119C00085000") + quote(", ") + "contract_type:eq:"),
-        "sort": "-record_date",
-    }
-    return
+    if response.status_code in (200, 203):
+        data = response.json()["expirations"]
+        print(data)
+        print()
+        # expiration = input("Enter an expiration date: ")
+        # print()
+        return
+    else:
+        return f"Error: {response.status_code}"
 
 
 def black_scholes(S_t, K, r, t, sigma):
-    """ black_scholes algorithm """
+    """Black_scholes algorithm."""
     # C = call option price
     # S_t = spot price
     # K = strike price
@@ -96,8 +127,10 @@ def black_scholes(S_t, K, r, t, sigma):
 
 
 if __name__ == "__main__":
-    interest_rate = float(api_call_interest_rate())
-    print(api_all_tickers())
+    interest_rate = float(api_interest_rate())
+    # print(api_all_tickers())
+
+    api_iv_spot()
 
     t_m = 3 / 365
     # option_price = black_scholes(20, 18, interest_rate, t_m, 0.5)
