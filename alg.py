@@ -6,7 +6,6 @@ import os
 from dotenv import load_dotenv
 
 
-# polygon api keys
 load_dotenv()
 polygon_api_key = os.getenv('POLYGON_API_KEY')
 polygon_key_id = os.getenv('POLYGON_KEY_ID')
@@ -32,6 +31,7 @@ def api_all_tickers():
 
 def api_interest_rate():
     """ API Call for risk-free rate. """
+    # https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/avg_interest_rates
     base_url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
     endpoint = "/v2/accounting/od/avg_interest_rates"
     params = {
@@ -49,33 +49,6 @@ def api_interest_rate():
     else:
         return f"Error: {response.status_code}"
 
-    # https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/avg_interest_rates
-
-
-# def api_call_spot_price():
-#     """API Call for spot price."""
-
-#     url = "https://api.polygon.io/v2/aggs/ticker/O:TSLA230113C00015000/range/1/day/2023-01-01/2023-01-11"
-#     headers = {
-#         "Authorization": f"Bearer {api_key}"
-#     }
-
-#     response = requests.get(url, headers=headers)
-#     data = response.json()
-#     return
-
-
-# def api_call_strike_price(ticker):
-#     """API Call for strike price."""
-#     base_url = "https://api.marketdata.app/v1/options/chain/"
-#     endpoint = f"{ticker}/"
-#     params = {
-#         "fields": "strike_price",
-#         # "filter": "ticker:eq:" + quote("O:AAPL211119C00085000") + quote(", ") + "contract_type:eq:"),
-#         "sort": "-record_date",
-#     }
-#     response = requests.request("GET", url)
-#     return
 
 def api_marketdata_expiration(ticker, headers):
     """MarketData API Call for expiration dates."""
@@ -120,7 +93,32 @@ def api_marketdata_strikes(ticker, headers):
         return f"Error: {response.status_code}"
 
 
-def api_iv_spot():
+def api_marketdata_lookup(ticker, headers):
+    """MarketData API Call for option symbol lookup."""
+    expiration = input("Enter expiration date: ")
+    print()
+    # TODO error checking for expiration date formatting
+    base_url = "https://api.marketdata.app/v1/options/strikes"
+    params = {
+        'expiration': expiration
+    }
+    response = requests.get(f"{base_url}/{ticker}", params=params, headers=headers)
+    # print(f"Request URL: {response.url}")
+    # print(response.text)
+    # print(response.content)
+
+    if response.status_code in (200, 203):
+        # print("in if loop")
+        data = response.json()[f"{expiration}"]
+        print("Strike prices:")
+        print(data)
+        print()
+        return
+    else:
+        return f"Error: {response.status_code}"
+
+
+def api_marketdata():
     """MarketData api calls."""
 
     ticker = input("Enter a ticker: ")
@@ -136,7 +134,7 @@ def api_iv_spot():
     # response -> available strike prices
     api_marketdata_strikes(ticker, headers)
     # response -> option symbol
-    # api_marketdata_lookup(ticker, headers)
+    api_marketdata_lookup(ticker, headers)
 
 
 def black_scholes(S_t, K, r, t, sigma):
@@ -164,7 +162,7 @@ if __name__ == "__main__":
     interest_rate = float(api_interest_rate())
     # print(api_all_tickers())
 
-    api_iv_spot()
+    api_marketdata()
 
     t_m = 3 / 365
     # option_price = black_scholes(20, 18, interest_rate, t_m, 0.5)
