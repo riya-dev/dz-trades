@@ -5,7 +5,6 @@ from urllib.parse import quote
 import os
 from dotenv import load_dotenv
 
-
 load_dotenv()
 polygon_api_key = os.getenv('POLYGON_API_KEY')
 polygon_key_id = os.getenv('POLYGON_KEY_ID')
@@ -83,37 +82,51 @@ def api_marketdata_strikes(ticker, headers):
     # print(response.content)
 
     if response.status_code in (200, 203):
-        # print("in if loop")
         data = response.json()[f"{expiration}"]
         print("Strike prices:")
         print(data)
         print()
-        return
+        return expiration
     else:
         return f"Error: {response.status_code}"
 
 
-def api_marketdata_lookup(ticker, headers):
+def api_marketdata_lookup(ticker, expiration, headers):
     """MarketData API Call for option symbol lookup."""
-    expiration = input("Enter expiration date: ")
+    strike_price = input("Enter strike price: ")
     print()
-    # TODO error checking for expiration date formatting
-    base_url = "https://api.marketdata.app/v1/options/strikes"
-    params = {
-        'expiration': expiration
-    }
-    response = requests.get(f"{base_url}/{ticker}", params=params, headers=headers)
-    # print(f"Request URL: {response.url}")
-    # print(response.text)
-    # print(response.content)
+    option_side = "call"
+
+    user_input = f"{ticker} {expiration} ${strike_price} {option_side}"
+    encoded_user_input = quote(user_input)
+
+    url = f"https://api.marketdata.app/v1/options/lookup/{encoded_user_input}"
+    
+    response = requests.get(url)
 
     if response.status_code in (200, 203):
-        # print("in if loop")
-        data = response.json()[f"{expiration}"]
-        print("Strike prices:")
-        print(data)
+        data = response.json()['optionSymbol']
+        print("Option symbol:", data)
         print()
-        return
+        return data
+    else:
+        return f"Error: {response.status_code}"
+
+
+def api_marketdata_quotes(option_symbol, headers):
+    """MarketData API Call for underlyingPrice, iv, vega values."""
+    # user_input = f"{ticker} {expiration} ${strike_price} {option_side}"
+    # encoded_user_input = quote(user_input)
+
+    url = f"https://api.marketdata.app/v1/options/quotes/{option_symbol}/"
+    
+    response = requests.get(url)
+
+    if response.status_code in (200, 203):
+        data = response.json()
+        # print("Option symbol:", data)
+        print()
+        return data
     else:
         return f"Error: {response.status_code}"
 
@@ -132,9 +145,12 @@ def api_marketdata():
     # response -> option ticker expiration
     api_marketdata_expiration(ticker, headers)
     # response -> available strike prices
-    api_marketdata_strikes(ticker, headers)
+    expiration = api_marketdata_strikes(ticker, headers)
     # response -> option symbol
-    api_marketdata_lookup(ticker, headers)
+    option_symbol = api_marketdata_lookup(ticker, expiration, headers)
+    # quotes
+    # underlying_price, iv, vega = api_marketdata_quotes(option_symbol, headers)
+    api_marketdata_quotes(option_symbol, headers)
 
 
 def black_scholes(S_t, K, r, t, sigma):
