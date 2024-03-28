@@ -15,21 +15,21 @@ polygon_key_id = os.getenv('POLYGON_KEY_ID')
 marketdata_api_token = os.getenv('MARKETDATA_API_TOKEN')
 
 
-def api_all_tickers():
-    """ API Call for all etf stock option tickers. """
-    base_url = "https://api.polygon.io"
-    endpoint = "/v3/reference/tickers?type=ETF&market=stocks&active=true&apiKey="
-    full_url = f"{base_url}{endpoint}{polygon_api_key}"
+# def api_all_tickers():
+#     """ API Call for all etf stock option tickers. """
+#     base_url = "https://api.polygon.io"
+#     endpoint = "/v3/reference/tickers?type=ETF&market=stocks&active=true&apiKey="
+#     full_url = f"{base_url}{endpoint}{polygon_api_key}"
 
-    response = requests.get(full_url)
+#     response = requests.get(full_url)
 
-    if response.status_code == 200:
-        data = response.json()["results"]
-        ticker_list = [entry['ticker'] for entry in data]
-        print(ticker_list)
-        return ticker_list[0]
-    else:
-        return f"Error: {response.status_code}"
+#     if response.status_code == 200:
+#         data = response.json()["results"]
+#         ticker_list = [entry['ticker'] for entry in data]
+#         print(ticker_list)
+#         return ticker_list[0]
+#     else:
+#         return f"Error: {response.status_code}"
 
 
 def api_interest_rate():
@@ -62,9 +62,10 @@ def api_marketdata_expiration(ticker, headers):
     response = requests.get(full_url, headers=headers)
 
     if response.status_code in (200, 203):
-        data = response.json()["expirations"]
+        data = response.json()
+        expiration_dates = data["expirations"]
         print("Expiration dates:")
-        print(data)
+        print(expiration_dates)
         print()
         return
     else:
@@ -86,19 +87,20 @@ def api_marketdata_strikes(ticker, headers):
     # print(response.content)
 
     if response.status_code in (200, 203):
-        data = response.json()[f"{expiration}"]
+        data = response.json()
+        strike_prices = data[f"{expiration}"]
         print("Strike prices:")
-        print(data)
+        print(strike_prices)
         print()
-        return expiration
+        return expiration, strike_prices
     else:
         return f"Error: {response.status_code}"
 
 
-def api_marketdata_lookup(ticker, expiration, headers):
+def api_marketdata_lookup(strike_price, ticker, expiration, headers):
     """MarketData API Call for option symbol lookup."""
-    strike_price = input("Enter strike price: ")
-    print()
+    # strike_price = input("Enter strike price: ")
+    # print()
     option_side = "call"
 
     user_input = f"{ticker} {expiration} ${strike_price} {option_side}"
@@ -140,6 +142,39 @@ def api_marketdata_quotes(option_symbol, headers):
         return f"Error: {response.status_code}"
 
 
+def strike_price_loop_calls(strike_prices, ticker, expiration, headers):
+    """Calling black-schole on several strike prices."""
+    # strike price [] = |50|; want middle 16
+    # start_index = (strike_price.size - 16) / 2
+    # strike_price [start_index : start_index + 15] (inclusive)
+    # ex. 50 - 16 =  34 / 2 = 17
+    # [0-16] [33-50]
+    # [17-32] = 16
+    middle_index = (len(strike_prices) - 16) // 2
+    end_index = middle_index + 15
+
+    for i in range(middle_index, end_index + 1):
+        print("strike price:", strike_prices[i])
+        strike_price = strike_prices[i]
+
+        # response -> option symbol
+        option_symbol, strike_price = api_marketdata_lookup(strike_price, ticker, expiration, headers)
+
+        # quotes
+        underlyingPrice, iv = api_marketdata_quotes(option_symbol, headers)
+
+        if iv == 0:
+            continue
+
+        t_m = 1 / 365
+
+        option_price = black_scholes(underlyingPrice, strike_price, interest_rate, t_m, iv)
+        print("---")
+        print(f"Black-Scholes Call Option Price: {option_price}")
+
+    return
+
+
 def api_marketdata():
     """MarketData api calls."""
 
@@ -154,13 +189,18 @@ def api_marketdata():
     # response -> option ticker expiration
     api_marketdata_expiration(ticker, headers)
     # response -> available strike prices
-    expiration = api_marketdata_strikes(ticker, headers)
-    # response -> option symbol
-    option_symbol, strike_price = api_marketdata_lookup(ticker, expiration, headers)
-    # quotes
-    underlyingPrice, iv = api_marketdata_quotes(option_symbol, headers)
+    expiration, strike_prices = api_marketdata_strikes(ticker, headers)
 
-    return expiration, option_symbol, strike_price, underlyingPrice, iv
+    strike_price_loop_calls(strike_prices, ticker, expiration, headers)
+
+    return
+
+    # # response -> option symbol
+    # option_symbol, strike_price = api_marketdata_lookup(ticker, expiration, headers)
+    # # quotes
+    # underlyingPrice, iv = api_marketdata_quotes(option_symbol, headers)
+
+    # return expiration, option_symbol, strike_price, underlyingPrice, iv
 
 
 def black_scholes(S_t, K, r, t, iv):
@@ -186,11 +226,12 @@ def black_scholes(S_t, K, r, t, iv):
 
 if __name__ == "__main__":
     interest_rate = float(api_interest_rate())
-    # print(api_all_tickers())
 
-    expiration, option_symbol, strike_price, underlyingPrice, iv = api_marketdata()
+    api_marketdata()
 
-    t_m = 1 / 365 # TODO: fix the time to maturity
-    option_price = black_scholes(underlyingPrice, strike_price, interest_rate, t_m, iv)
-    print("---")
-    print(f"Black-Scholes Call Option Price: {option_price}")
+    # expiration, option_symbol, strike_price, underlyingPrice, iv = api_marketdata()
+
+    # t_m = 1 / 365 # TODO: fix the time to maturity
+    # option_price = black_scholes(underlyingPrice, strike_price, interest_rate, t_m, iv)
+    # print("---")
+    # print(f"Black-Scholes Call Option Price: {option_price}")
