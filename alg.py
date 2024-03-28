@@ -105,10 +105,11 @@ def api_marketdata_lookup(ticker, expiration, headers):
     response = requests.get(url)
 
     if response.status_code in (200, 203):
-        data = response.json()['optionSymbol']
-        print("Option symbol:", data)
+        data = response.json()
+        option_symbol = data['optionSymbol']
+        print("Option symbol:", option_symbol)
         print()
-        return data
+        return option_symbol, float(strike_price)
     else:
         return f"Error: {response.status_code}"
 
@@ -119,14 +120,18 @@ def api_marketdata_quotes(option_symbol, headers):
     # encoded_user_input = quote(user_input)
 
     url = f"https://api.marketdata.app/v1/options/quotes/{option_symbol}/"
-    
+
+    # response = requests.request("GET", url)
+    # response = requests.get(url, headers=headers)
     response = requests.get(url)
 
     if response.status_code in (200, 203):
         data = response.json()
-        # print("Option symbol:", data)
-        print()
-        return data
+        underlying_price = data["underlyingPrice"][0]
+        iv = data["iv"][0]
+        # print(data)
+        # print()
+        return underlying_price, iv
     else:
         return f"Error: {response.status_code}"
 
@@ -147,13 +152,14 @@ def api_marketdata():
     # response -> available strike prices
     expiration = api_marketdata_strikes(ticker, headers)
     # response -> option symbol
-    option_symbol = api_marketdata_lookup(ticker, expiration, headers)
+    option_symbol, strike_price = api_marketdata_lookup(ticker, expiration, headers)
     # quotes
-    # underlying_price, iv, vega = api_marketdata_quotes(option_symbol, headers)
-    api_marketdata_quotes(option_symbol, headers)
+    underlyingPrice, iv = api_marketdata_quotes(option_symbol, headers)
+
+    return expiration, option_symbol, strike_price, underlyingPrice, iv
 
 
-def black_scholes(S_t, K, r, t, sigma):
+def black_scholes(S_t, K, r, t, iv):
     """Black_scholes algorithm."""
     # C = call option price
     # S_t = spot price
@@ -166,10 +172,10 @@ def black_scholes(S_t, K, r, t, sigma):
     # d_1 = (ln (S_t / K) + (r + (sigma^2 / 2))t) / (sigma sqrt(t))
     # d_2 = d_1 - \sigma \sqrt(t)
 
-    print("spot price (S_t):\t\t", S_t, "\nstrike price (K):\t\t", K, "\nrisk-free interest rate (r):\t", r, "\ntime to maturity (t):\t\t", t, "\nsigma:\t\t\t\t", sigma)
+    print("spot price (S_t):\t\t", S_t, "\nstrike price (K):\t\t", K, "\nrisk-free interest rate (r):\t", r, "\ntime to maturity (t):\t\t", t, "\nimplied volatility (iv):\t", iv)
 
-    d1 = (math.log(S_t / K) + (t * (r + 0.5 * sigma**2))) / (sigma * math.sqrt(t))
-    d2 = d1 - sigma * math.sqrt(t)
+    d1 = (math.log(S_t / K) + (t * (r + 0.5 * iv**2))) / (iv * math.sqrt(t))
+    d2 = d1 - iv * math.sqrt(t)
     C = norm.cdf(d1) * S_t - norm.cdf(d2) * K * math.e**(-r * t)
     return C
 
@@ -178,9 +184,9 @@ if __name__ == "__main__":
     interest_rate = float(api_interest_rate())
     # print(api_all_tickers())
 
-    api_marketdata()
+    expiration, option_symbol, strike_price, underlyingPrice, iv = api_marketdata()
 
-    t_m = 3 / 365
-    # option_price = black_scholes(20, 18, interest_rate, t_m, 0.5)
-    # print("---")
-    # print(f"Black-Scholes Call Option Price: {option_price}")
+    t_m = 1 / 365 # TODO: fix the time to maturity
+    option_price = black_scholes(underlyingPrice, strike_price, interest_rate, t_m, iv)
+    print("---")
+    print(f"Black-Scholes Call Option Price: {option_price}")
