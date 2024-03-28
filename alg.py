@@ -1,3 +1,7 @@
+# riya dev & luke zhu
+# luke is a bba who got that options knowledge
+# riya is a cs engr who got that coding knowledge
+
 import math
 from scipy.stats import norm
 import requests

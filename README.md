@@ -1,1 +1,2 @@
-# dz-trades look zoo reeyuh dave
+# dz-trades
+## riya dev & luke zhu
