@@ -107,11 +107,11 @@ def api_marketdata_lookup(strike_price, ticker, expiration, headers):
     encoded_user_input = quote(user_input)
 
     url = f"https://api.marketdata.app/v1/options/lookup/{encoded_user_input}"
-    
-    response = requests.get(url)
+    response = requests.get(url, headers=headers)
 
     if response.status_code in (200, 203):
         data = response.json()
+        # print(data)
         option_symbol = data['optionSymbol']
         print("Option symbol:", option_symbol)
         print()
@@ -129,7 +129,7 @@ def api_marketdata_quotes(option_symbol, headers):
 
     # response = requests.request("GET", url)
     # response = requests.get(url, headers=headers)
-    response = requests.get(url)
+    response = requests.get(url, headers=headers)
 
     if response.status_code in (200, 203):
         data = response.json()
