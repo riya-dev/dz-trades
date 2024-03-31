@@ -7,7 +7,7 @@ import requests
 from urllib.parse import quote
 import os
 from dotenv import load_dotenv
-from datetime import date
+from datetime import datetime, date
 
 
 load_dotenv()
@@ -94,8 +94,8 @@ def api_marketdata_lookup(strike_price, ticker, expiration, headers):
    if response.status_code in (200, 203):
        data = response.json()
        option_symbol = data['optionSymbol']
-       print("Option symbol:", option_symbol)
-       print()
+      #  print("Option symbol:", option_symbol)
+      #  print()
        return option_symbol, float(strike_price)
    else:
        return f"Error: {response.status_code}"
@@ -132,22 +132,19 @@ def strike_price_loop_calls():
    # response -> option ticker expiration
    expiration_date = api_marketdata_expiration(ticker, headers)
 
-
    # response -> available strike prices
    strike_prices = api_marketdata_strikes(ticker, expiration_date, headers)
+   
+   # t_m calculation
+   today = datetime.combine(date.today(), datetime.min.time())
+   date_format = "%Y-%m-%d"
+   expiration_date_object = datetime.strptime(expiration_date, date_format)
+   t_m = (expiration_date_object - today).days / 365
 
-   # strike price [] = |50|; want middle 16
-   # start_index = (strike_price.size - 16) / 2
-   # strike_price [start_index : start_index + 15] (inclusive)
-   # ex. 50 - 16 =  34 / 2 = 17
-   # [0-16] [33-50]
-   # [17-32] = 16
    middle_index = (len(strike_prices) - 16) // 2
    end_index = middle_index + 15
 
    for i in range(middle_index, end_index + 1):
-       print("strike price:", strike_prices[i])
-
        strike_price = strike_prices[i]
 
        # response -> option symbol
@@ -158,12 +155,13 @@ def strike_price_loop_calls():
 
        if iv == 0:
            continue
-
-       t_m = 5 / 365
+        
+       print("strike price:", strike_prices[i])
 
        option_price = black_scholes(underlyingPrice, strike_price, interest_rate, t_m, iv)
        print("---")
        print(f"Black-Scholes Call Option Price: {option_price}")
+       print()
 
    return
 
