@@ -7,6 +7,7 @@ import requests
 from urllib.parse import quote
 import os
 from dotenv import load_dotenv
+from datetime import date
 
 
 load_dotenv()
@@ -47,32 +48,33 @@ def api_marketdata_expiration(ticker, headers):
    if response.status_code in (200, 203):
        data = response.json()
        expiration_dates = data["expirations"]
-       print("Expiration dates:")
-       print(expiration_dates)
+       print("Expiration date:", expiration_dates[0])
        print()
-       return
+        # print("Expiration dates:")
+        # print(expiration_dates)
+        # print()
+       return expiration_dates[0]
    else:
        return f"Error: {response.status_code}"
 
 
-def api_marketdata_strikes(ticker, headers):
+def api_marketdata_strikes(ticker, expiration_date, headers):
    """MarketData API Call for expiration dates."""
-   expiration = input("Enter expiration date: ")
-   print()
+    # expiration_date = input("Enter expiration date: ")
+    # print()
    # TODO error checking for expiration date formatting
    base_url = "https://api.marketdata.app/v1/options/strikes"
    params = {
-       'expiration': expiration
+       'expiration': expiration_date
    }
    response = requests.get(f"{base_url}/{ticker}", params=params, headers=headers)
 
    if response.status_code in (200, 203):
        data = response.json()
-       strike_prices = data[f"{expiration}"]
-       print("Strike prices:")
-       print(strike_prices)
-       print()
-       return expiration, strike_prices
+       strike_prices = data[f"{expiration_date}"]
+        # print("Strike prices:", strike_prices)
+        # print()
+       return strike_prices
    else:
        return f"Error: {response.status_code}"
 
@@ -91,7 +93,6 @@ def api_marketdata_lookup(strike_price, ticker, expiration, headers):
 
    if response.status_code in (200, 203):
        data = response.json()
-       # print(data)
        option_symbol = data['optionSymbol']
        print("Option symbol:", option_symbol)
        print()
@@ -129,10 +130,11 @@ def strike_price_loop_calls():
    }
 
    # response -> option ticker expiration
-   api_marketdata_expiration(ticker, headers)
+   expiration_date = api_marketdata_expiration(ticker, headers)
+
 
    # response -> available strike prices
-   expiration, strike_prices = api_marketdata_strikes(ticker, headers)
+   strike_prices = api_marketdata_strikes(ticker, expiration_date, headers)
 
    # strike price [] = |50|; want middle 16
    # start_index = (strike_price.size - 16) / 2
@@ -149,7 +151,7 @@ def strike_price_loop_calls():
        strike_price = strike_prices[i]
 
        # response -> option symbol
-       option_symbol, strike_price = api_marketdata_lookup(strike_price, ticker, expiration, headers)
+       option_symbol, strike_price = api_marketdata_lookup(strike_price, ticker, expiration_date, headers)
 
        # quotes
        underlyingPrice, iv = api_marketdata_quotes(option_symbol, headers)
@@ -157,7 +159,7 @@ def strike_price_loop_calls():
        if iv == 0:
            continue
 
-       t_m = 1 / 365
+       t_m = 5 / 365
 
        option_price = black_scholes(underlyingPrice, strike_price, interest_rate, t_m, iv)
        print("---")
