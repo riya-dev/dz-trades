@@ -1,3 +1,4 @@
+
 # riya dev & luke zhu
 # luke is a bba who got that options knowledge
 # riya is a cs engr who got that coding knowledge
@@ -180,7 +181,7 @@ def black_scholes(S_t, K, r, t, iv):
     # t = time to maturity (3/365)
     # sigma = volatility of the asset
 
-    # print("spot price (S_t):\t\t", S_t, "\nstrike price (K):\t\t", K, "\nrisk-free interest rate (r):\t", r, "\ntime to maturity (t):\t\t", t, "\nimplied volatility (iv):\t", iv)
+    print("spot price (S_t):\t\t", S_t, "\nstrike price (K):\t\t", K, "\nrisk-free interest rate (r):\t", r, "\ntime to maturity (t):\t\t", t, "\nimplied volatility (iv):\t", iv)
 
     d1 = (math.log(S_t / K) + (t * (r + 0.5 * iv**2))) / (iv * math.sqrt(t))
     d2 = d1 - iv * math.sqrt(t)
